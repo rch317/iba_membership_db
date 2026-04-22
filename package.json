@@ -1,0 +1,35 @@
+{
+  "name": "iba_membership_db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IBA membership database API scaffold",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "init:indexes": "node scripts/init-indexes.js",
+    "seed:dev": "node scripts/seed-dev-data.js",
+    "import:sheets": "node scripts/import-from-sheets.js",
+    "import:sheets:dry": "node scripts/import-from-sheets.js --dry-run",
+    "import:sheets:overwrite": "node scripts/import-from-sheets.js --overwrite",
+    "test": "npm run test:integration",
+    "test:integration": "node --test test/integration/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^171.4.0",
+    "helmet": "^7.1.0",
+    "mongodb": "^6.8.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.0.1",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.2.2"
+  }
+}

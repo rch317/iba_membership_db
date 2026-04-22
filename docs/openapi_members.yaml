@@ -1,0 +1,768 @@
+openapi: 3.0.3
+info:
+  title: IBA Membership API
+  version: 0.1.0
+  description: OpenAPI specification for currently implemented health and member lifecycle endpoints.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Health
+  - name: Members
+security: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      responses:
+        "200":
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthOk"
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    service: iba-membership-api
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      responses:
+        "200":
+          description: MongoDB is connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyOk"
+              examples:
+                ready:
+                  value:
+                    status: ready
+                    mongo: connected
+        "503":
+          description: MongoDB is not connected yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyNot"
+              examples:
+                notReady:
+                  value:
+                    status: not-ready
+                    mongo: disconnected
+
+  /health/mongo:
+    get:
+      tags: [Health]
+      summary: MongoDB ping check
+      responses:
+        "200":
+          description: MongoDB is reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthMongoOk"
+              examples:
+                reachable:
+                  value:
+                    status: ok
+                    mongo: reachable
+        "503":
+          description: MongoDB is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+              examples:
+                unavailable:
+                  value:
+                    status: error
+                    mongo: client-not-initialized
+
+  /members:
+    post:
+      tags: [Members]
+      summary: Create a member and append initial lifecycle event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemberRequest"
+            examples:
+              createMember:
+                value:
+                  firstName: Ada
+                  lastName: Lovelace
+                  emailAddress: ada@example.org
+                  primaryPhone: "555-555-1111"
+                  city: Indianapolis
+                  state: IN
+                  postalZip: "46201"
+                  recurringMember: true
+                  membership_list: true
+                  mailing_list: true
+                  email_news: true
+                  hide_email: false
+                  currentStatus: active
+                  statusEffectiveDate: "2026-04-22T00:00:00.000Z"
+                  statusReason: New signup
+      responses:
+        "201":
+          description: Member created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEnvelope"
+              examples:
+                created:
+                  value:
+                    member:
+                      _id: 6635e9bf11ad99a9eafcb143
+                      firstName: Ada
+                      lastName: Lovelace
+                      emailAddress: ada@example.org
+                      currentStatus: active
+                      statusEffectiveDate: "2026-04-22T00:00:00.000Z"
+                      statusReason: New signup
+                      createdAt: "2026-04-22T12:00:00.000Z"
+                      updatedAt: "2026-04-22T12:00:00.000Z"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: Duplicate key violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+              examples:
+                duplicateEmail:
+                  value:
+                    error: Duplicate key violation (likely emailAddress).
+        "500":
+          description: Server error creating member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+
+    get:
+      tags: [Members]
+      summary: List members
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/MemberStatus"
+          description: Filter by current member status.
+        - in: query
+          name: includeDeleted
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+          description: Include soft-deleted members only when true.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+          description: Maximum number of members returned.
+      responses:
+        "200":
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, members]
+                properties:
+                  count:
+                    type: integer
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Member"
+              examples:
+                list:
+                  value:
+                    count: 2
+                    members:
+                      - _id: 6635e9bf11ad99a9eafcb143
+                        firstName: Ada
+                        lastName: Lovelace
+                        currentStatus: active
+                        statusEffectiveDate: "2026-04-22T00:00:00.000Z"
+                      - _id: 6635ea8d11ad99a9eafcb146
+                        firstName: Eli
+                        lastName: Whitney
+                        currentStatus: inactive
+                        statusEffectiveDate: "2026-03-15T00:00:00.000Z"
+
+  /members/{id}:
+    get:
+      tags: [Members]
+      summary: Get one member by id
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+        - in: query
+          name: includeDeleted
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+      responses:
+        "200":
+          description: Member found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEnvelope"
+        "400":
+          description: Invalid id format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+              examples:
+                invalid:
+                  value:
+                    error: Invalid member id.
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+              examples:
+                missing:
+                  value:
+                    error: Member not found.
+
+    patch:
+      tags: [Members]
+      summary: Update one or more mutable member fields
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemberRequest"
+            examples:
+              updateMember:
+                value:
+                  city: Bloomington
+                  primaryPhone: "555-555-2222"
+                  email_news: false
+      responses:
+        "200":
+          description: Member updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+        "409":
+          description: Duplicate key violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+        "500":
+          description: Server error updating member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+
+    delete:
+      tags: [Members]
+      summary: Soft-delete a member and append cancellation event
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      responses:
+        "200":
+          description: Member marked as deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, memberId]
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+                  memberId:
+                    type: string
+                    pattern: "^[a-fA-F0-9]{24}$"
+              examples:
+                deleted:
+                  value:
+                    status: deleted
+                    memberId: 6635e9bf11ad99a9eafcb143
+        "400":
+          description: Invalid id format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+
+  /members/{id}/status:
+    patch:
+      tags: [Members]
+      summary: Change member status and append immutable status event
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+            examples:
+              statusUpdate:
+                value:
+                  newStatus: inactive
+                  effectiveDate: "2026-04-22T00:00:00.000Z"
+                  reason: Lapsed for non-renewal
+                  note: Contacted by phone before status change
+                  source: api
+      responses:
+        "200":
+          description: Status changed and event written
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [member, membershipEventId]
+                properties:
+                  member:
+                    $ref: "#/components/schemas/Member"
+                  membershipEventId:
+                    type: string
+                    pattern: "^[a-fA-F0-9]{24}$"
+              examples:
+                updated:
+                  value:
+                    member:
+                      _id: 6635e9bf11ad99a9eafcb143
+                      firstName: Ada
+                      lastName: Lovelace
+                      currentStatus: inactive
+                      statusEffectiveDate: "2026-04-22T00:00:00.000Z"
+                      statusReason: Lapsed for non-renewal
+                      updatedAt: "2026-04-22T12:34:56.000Z"
+                    membershipEventId: 6635f0e711ad99a9eafcb1b2
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+
+  /members/{id}/history:
+    get:
+      tags: [Members]
+      summary: Get descending membership event history for one member
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      responses:
+        "200":
+          description: History events returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, events]
+                properties:
+                  count:
+                    type: integer
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MembershipEvent"
+              examples:
+                history:
+                  value:
+                    count: 2
+                    events:
+                      - _id: 6635f0e711ad99a9eafcb1b2
+                        member: 6635e9bf11ad99a9eafcb143
+                        eventType: status_change
+                        previousStatus: active
+                        newStatus: inactive
+                        effectiveDate: "2026-04-22T00:00:00.000Z"
+                        recordedAt: "2026-04-22T12:34:56.000Z"
+                        source: api
+                        actorUserId: null
+                        note: Contacted by phone before status change
+                        metadata:
+                          action: member_status_update
+                      - _id: 6635ea1811ad99a9eafcb145
+                        member: 6635e9bf11ad99a9eafcb143
+                        eventType: status_change
+                        previousStatus: null
+                        newStatus: active
+                        effectiveDate: "2026-04-22T00:00:00.000Z"
+                        recordedAt: "2026-04-22T12:00:00.000Z"
+                        source: api
+                        actorUserId: null
+                        note: New signup
+                        metadata:
+                          action: member_create
+        "400":
+          description: Invalid id format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorObject"
+
+components:
+  parameters:
+    MemberId:
+      in: path
+      name: id
+      required: true
+      description: MongoDB ObjectId of a member.
+      schema:
+        type: string
+        pattern: "^[a-fA-F0-9]{24}$"
+
+  responses:
+    ValidationError:
+      description: Request body did not pass validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorList"
+          examples:
+            validation:
+              value:
+                errors:
+                  - "currentStatus is required and must be one of: active, inactive, lapsed, honorary, deceased."
+
+  schemas:
+    MemberStatus:
+      type: string
+      enum: [active, inactive, lapsed, honorary, deceased]
+
+    HealthOk:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: iba-membership-api
+
+    ReadyOk:
+      type: object
+      required: [status, mongo]
+      properties:
+        status:
+          type: string
+          example: ready
+        mongo:
+          type: string
+          example: connected
+
+    ReadyNot:
+      type: object
+      required: [status, mongo]
+      properties:
+        status:
+          type: string
+          example: not-ready
+        mongo:
+          type: string
+          example: disconnected
+
+    HealthMongoOk:
+      type: object
+      required: [status, mongo]
+      properties:
+        status:
+          type: string
+          example: ok
+        mongo:
+          type: string
+          example: reachable
+
+    ErrorObject:
+      type: object
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+        status:
+          type: string
+        mongo:
+          type: string
+
+    ErrorList:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+
+    Member:
+      type: object
+      required:
+        - _id
+        - firstName
+        - lastName
+        - currentStatus
+        - statusEffectiveDate
+      properties:
+        _id:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        firstName:
+          type: string
+        lastName:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalZip:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        tertiaryPhone:
+          type: string
+        emailAddress:
+          type: string
+          nullable: true
+        satelliteHome:
+          type: string
+        recurringMember:
+          type: boolean
+        renewalDate:
+          type: string
+          format: date-time
+          nullable: true
+        membership_list:
+          type: boolean
+        mailing_list:
+          type: boolean
+        email_news:
+          type: boolean
+        hide_email:
+          type: boolean
+        currentStatus:
+          $ref: "#/components/schemas/MemberStatus"
+        statusEffectiveDate:
+          type: string
+          format: date-time
+        statusReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+
+    MemberEnvelope:
+      type: object
+      required: [member]
+      properties:
+        member:
+          $ref: "#/components/schemas/Member"
+
+    MembershipEvent:
+      type: object
+      required:
+        - _id
+        - member
+        - eventType
+        - newStatus
+        - effectiveDate
+        - recordedAt
+      properties:
+        _id:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        member:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        eventType:
+          type: string
+          example: status_change
+        previousStatus:
+          type: string
+          enum: [active, inactive, lapsed, honorary, deceased]
+          nullable: true
+        newStatus:
+          $ref: "#/components/schemas/MemberStatus"
+        effectiveDate:
+          type: string
+          format: date-time
+        recordedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        actorUserId:
+          type: string
+          nullable: true
+        note:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    CreateMemberRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - currentStatus
+        - statusEffectiveDate
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalZip:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        tertiaryPhone:
+          type: string
+        emailAddress:
+          type: string
+          format: email
+        satelliteHome:
+          type: string
+        recurringMember:
+          type: boolean
+        renewalDate:
+          type: string
+          format: date-time
+        membership_list:
+          type: boolean
+        mailing_list:
+          type: boolean
+        email_news:
+          type: boolean
+        hide_email:
+          type: boolean
+        currentStatus:
+          $ref: "#/components/schemas/MemberStatus"
+        statusEffectiveDate:
+          type: string
+          format: date-time
+        statusReason:
+          type: string
+
+    UpdateMemberRequest:
+      type: object
+      minProperties: 1
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalZip:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        tertiaryPhone:
+          type: string
+        emailAddress:
+          type: string
+          format: email
+        satelliteHome:
+          type: string
+        recurringMember:
+          type: boolean
+        renewalDate:
+          type: string
+          format: date-time
+        membership_list:
+          type: boolean
+        mailing_list:
+          type: boolean
+        email_news:
+          type: boolean
+        hide_email:
+          type: boolean
+      additionalProperties: false
+
+    UpdateStatusRequest:
+      type: object
+      required: [newStatus, effectiveDate]
+      properties:
+        newStatus:
+          $ref: "#/components/schemas/MemberStatus"
+        effectiveDate:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        note:
+          type: string
+        source:
+          type: string

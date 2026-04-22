@@ -1,0 +1,33 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: iba-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: iba-app
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - .env/dev/app.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm install && npm run dev"
+
+volumes:
+  mongo_data:

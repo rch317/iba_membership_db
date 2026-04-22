@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "node-code-sandbox": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "node-code-sandbox"]
+    }
+    "mongodb": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "mongodb"]
+  }
+    "memory": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "memory"]
+    }
+    "github-official": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "github-official"]
+    }
+}
