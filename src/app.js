@@ -4,6 +4,12 @@ const morgan = require("morgan");
 const path = require("node:path");
 const { createMembersRouter } = require("./routes/members");
 
+function envFlag(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return fallback;
+  return ["1", "true", "yes", "on"].includes(String(raw).toLowerCase());
+}
+
 function createApp(options) {
   const db = options && options.db;
   const getMongoClient = options && options.getMongoClient;
@@ -16,7 +22,16 @@ function createApp(options) {
 
   const app = express();
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          "upgrade-insecure-requests": null
+        }
+      }
+    })
+  );
   app.use(morgan("dev"));
   app.use(express.json());
 
@@ -34,7 +49,18 @@ function createApp(options) {
   // Register API routes
   app.use("/members", createMembersRouter(db));
 
-  app.use(express.static(publicDir));
+  app.use(
+    express.static(publicDir, {
+      etag: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".css") || filePath.endsWith(".js") || filePath.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+          res.setHeader("Pragma", "no-cache");
+          res.setHeader("Expires", "0");
+        }
+      }
+    })
+  );
 
   app.get("/", (req, res) => {
     res.sendFile(path.join(publicDir, "index.html"));
@@ -42,6 +68,10 @@ function createApp(options) {
 
   app.get("/admin", (req, res) => {
     res.sendFile(path.join(publicDir, "admin.html"));
+  });
+
+  app.get("/satellite-groups", (req, res) => {
+    res.sendFile(path.join(publicDir, "satellite-groups.html"));
   });
 
   app.get("/health", (req, res) => {
@@ -70,6 +100,15 @@ function createApp(options) {
     } catch (error) {
       return res.status(503).json({ status: "error", mongo: error.message });
     }
+  });
+
+  app.get("/config.js", (req, res) => {
+    const featureFlags = {
+      themeResetEnabled: envFlag("FEATURE_THEME_RESET_ENABLED", true)
+    };
+
+    res.type("application/javascript");
+    res.send(`window.__FEATURE_FLAGS__ = ${JSON.stringify(featureFlags)};`);
   });
 
   app.use("/members", createMembersRouter(db));

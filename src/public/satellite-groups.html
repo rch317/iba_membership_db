@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IBA Member Directory</title>
+    <title>IBA Satellite Groups</title>
     <link rel="stylesheet" href="/styles.css?v=20260423" />
   </head>
   <body>
@@ -13,10 +13,10 @@
     <header class="app-header">
       <div class="brand">
         <p class="kicker">Indiana Blacksmithing Association</p>
-        <h1>Member Directory</h1>
+        <h1>Satellite Groups</h1>
       </div>
       <div class="header-actions">
-        <p class="header-note">Contact directory for members who have opted in to the membership list.</p>
+        <p class="header-note">Browse active, opted-in members grouped by their satellite chapter.</p>
         <button id="themeToggle" class="btn theme-toggle" type="button" aria-pressed="false">Switch to Light Mode</button>
         <button class="btn theme-reset" type="button" data-theme-reset="true">Reset Theme</button>
       </div>
@@ -27,8 +27,8 @@
         <h2>Search</h2>
         <form id="filtersForm" class="form-grid compact">
           <label class="full-width">
-            Search members
-            <input id="searchInput" name="search" type="search" placeholder="Name or email address…" autocomplete="off" />
+            Search groups or members
+            <input id="searchInput" name="search" type="search" placeholder="Group name, member name, or email…" autocomplete="off" />
           </label>
           <button id="refreshBtn" type="submit" class="btn btn-primary">Refresh</button>
         </form>
@@ -36,18 +36,18 @@
 
       <section class="panel members-panel">
         <div class="panel-heading">
-          <h2>Members</h2>
-          <p id="memberCount">0 loaded</p>
+          <h2>Groups</h2>
+          <p id="groupCount">0 groups</p>
         </div>
-        <ul id="membersList" class="member-list"></ul>
+        <ul id="groupList" class="member-list"></ul>
       </section>
 
       <section class="panel detail-panel">
         <div class="panel-heading">
-          <h2>Contact Info</h2>
-          <p id="selectedMemberHint">Select a member to view contact information.</p>
+          <h2>Group Members</h2>
+          <p id="selectedGroupHint">Select a group to view members.</p>
         </div>
-        <div id="memberDetails" class="member-details empty">No member selected.</div>
+        <div id="groupDetails" class="member-details empty">No group selected.</div>
       </section>
     </main>
 
@@ -55,6 +55,6 @@
 
     <script src="/config.js?v=20260423" defer></script>
     <script src="/theme.js?v=20260423" defer></script>
-    <script src="/public.js?v=20260423" defer></script>
+    <script src="/satellites.js?v=20260423" defer></script>
   </body>
 </html>

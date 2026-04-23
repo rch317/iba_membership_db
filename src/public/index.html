@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IBA — Indiana Blacksmithing Association</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260423" />
   </head>
   <body>
     <div class="bg-orb bg-orb-a" aria-hidden="true"></div>
@@ -15,14 +15,28 @@
         <p class="kicker">Indiana Blacksmithing Association</p>
         <h1>Welcome</h1>
       </div>
-      <p class="header-note">Coming soon</p>
+      <div class="header-actions">
+        <p class="header-note">Choose a workspace to continue.</p>
+        <button id="themeToggle" class="btn theme-toggle" type="button" aria-pressed="false">Switch to Light Mode</button>
+        <button class="btn theme-reset" type="button" data-theme-reset="true">Reset Theme</button>
+      </div>
     </header>
 
     <main class="layout">
-      <!-- Content coming soon -->
+      <section class="panel controls-panel">
+        <h2>Start Here</h2>
+        <p class="header-note">Open the public directory, browse satellite groups, or jump into administration.</p>
+        <div class="toggle-row">
+          <a class="btn btn-primary" href="/members">Member Directory</a>
+          <a class="btn btn-secondary" href="/satellite-groups">Satellite Groups</a>
+          <a class="btn btn-secondary" href="/admin">Admin Panel</a>
+        </div>
+      </section>
     </main>
 
     <aside id="toast" class="toast" aria-live="polite"></aside>
+    <script src="/config.js?v=20260423" defer></script>
+    <script src="/theme.js?v=20260423" defer></script>
   </body>
 </html>
 
