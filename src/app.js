@@ -15,6 +15,7 @@ function createApp(options) {
   const getMongoClient = options && options.getMongoClient;
   const getMongoReady = options && options.getMongoReady;
   const dbName = (options && options.dbName) || "membership";
+  const readOnlyMode = envFlag("READ_ONLY_MODE", false);
 
   if (!db) {
     throw new Error("createApp requires a MongoDB db instance.");
@@ -47,7 +48,7 @@ function createApp(options) {
   });
 
   // Register API routes
-  app.use("/members", createMembersRouter(db));
+  app.use("/members", createMembersRouter(db, { readOnlyMode }));
 
   app.use(
     express.static(publicDir, {
@@ -75,7 +76,7 @@ function createApp(options) {
   });
 
   app.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok", service: "iba-membership-api" });
+    res.status(200).json({ status: "ok", service: "iba-membership-api", readOnlyMode });
   });
 
   app.get("/health/ready", (req, res) => {
@@ -110,8 +111,6 @@ function createApp(options) {
     res.type("application/javascript");
     res.send(`window.__FEATURE_FLAGS__ = ${JSON.stringify(featureFlags)};`);
   });
-
-  app.use("/members", createMembersRouter(db));
 
   return app;
 }

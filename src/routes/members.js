@@ -19,10 +19,21 @@ function sanitizeMember(member) {
   return member;
 }
 
-function createMembersRouter(db) {
+function createMembersRouter(db, options) {
   const router = express.Router();
   const membersCollection = db.collection("iba_members");
   const eventsCollection = db.collection("iba_membership_events");
+  const readOnlyMode = Boolean(options && options.readOnlyMode);
+
+  router.use((req, res, next) => {
+    const isWriteMethod = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+    if (readOnlyMode && isWriteMethod) {
+      return res.status(403).json({
+        error: "API is running in read-only mode. Write operations are disabled."
+      });
+    }
+    next();
+  });
 
   router.post("/", async (req, res) => {
     const { errors, value } = validateCreateMemberPayload(req.body);

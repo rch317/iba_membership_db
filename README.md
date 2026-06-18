@@ -50,6 +50,22 @@ For local Docker development, use one of the following depending on where the ap
 - App running on host machine: `mongodb://localhost:27017/membership`
 - App running in Docker Compose network: `mongodb://mongo:27017/membership`
 
+## Atlas read-only mode
+
+To point the app at MongoDB Atlas and enforce read-only behavior:
+
+1. Create an Atlas database user with **read** role (not readWrite) on the target database.
+2. Set `MONGO_URI` in `.env/dev/app.env` to your Atlas SRV connection string.
+3. Set `READ_ONLY_MODE=true` in `.env/dev/app.env`.
+4. Restart app container:
+
+```bash
+docker compose restart app
+```
+
+When `READ_ONLY_MODE=true`, API write routes are blocked (`POST`, `PATCH`, `DELETE`) with HTTP 403.
+This gives app-level protection in addition to Atlas user permissions.
+
 ## Proposed implementation plan
 
 1. Define Docker Compose services for `app` and `mongo` in dev.
